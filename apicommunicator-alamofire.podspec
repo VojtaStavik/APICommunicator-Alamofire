@@ -11,6 +11,6 @@ Pod::Spec.new do |s|
   s.source_files   = '*.swift'
   s.frameworks = 'UIKit', 'CoreData'
   s.requires_arc = true
-  s.dependency 'Alamofire'
+  s.dependency 'Alamofire', '2'
   s.dependency 'SwiftyJSON'
 end
