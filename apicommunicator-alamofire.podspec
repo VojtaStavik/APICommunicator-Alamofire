@@ -13,4 +13,5 @@ Pod::Spec.new do |s|
   s.requires_arc = true
   s.dependency 'Alamofire', '< 3.0'
   s.dependency 'SwiftyJSON'
+  s.dependency = 'APICommunicator', :git => 'https://github.com/VojtaStavik/APICommunicator'
 end
