@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
-  s.name = 'APICommunicator-Alamofire'
+  s.name = 'APICommunicator_Alamofire'
   s.version = '0.1'
   s.license = 'MIT'
   s.summary = 'API calls to NSOperation wrapper + Alamofire'
