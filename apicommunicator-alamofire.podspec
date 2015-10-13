@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.source_files   = '*.swift'
   s.frameworks = 'UIKit', 'CoreData'
   s.requires_arc = true
-  s.dependency 'SwiftyJSON'
-  s.dependency 'Alamofire'
+  s.dependency 'Alamofire', '1.3'
+  s.dependency 'SwiftyJSON', '2.2.0'
   s.dependency 'APICommunicator', :git => 'https://github.com/VojtaStavik/APICommunicator'
 end
