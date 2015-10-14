@@ -9,7 +9,6 @@
 import UIKit
 import Alamofire
 import SwiftyJSON
-import APICommunicator
 
 enum Router: URLRequestConvertible
 {
