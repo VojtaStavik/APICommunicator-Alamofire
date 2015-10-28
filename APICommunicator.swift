@@ -6,9 +6,9 @@
 //
 
 import Foundation
-import SwiftyJSON
 
-public typealias APICommunicatorCompletionClosure = (responseObject: JSON?, error: APICommunicatorError?) -> Void
+
+public typealias APICommunicatorCompletionClosure = (responseObject: NSData?, error: APICommunicatorError?) -> Void
 public typealias APICommunicatorCustomCallClosure = (APICommunicatorCompletionClosure?) -> ()
 
 

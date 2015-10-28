@@ -131,10 +131,11 @@ public class AlamofireAPIFactory
     
     // MARK: - Alamofire
     
-    func sendAlamofireRequest(method: Alamofire.Method, path: String, parameters: [String : AnyObject]?, encoding: ParameterEncoding, options: NSJSONReadingOptions = .AllowFragments, headers: [String : String]?,completionHandler: (NSURLRequest?, NSHTTPURLResponse?, Result<AnyObject>) -> Void)
+    func sendAlamofireRequest(method: Alamofire.Method, path: String, parameters: [String : AnyObject]?, encoding: ParameterEncoding, options: NSJSONReadingOptions = .AllowFragments, headers: [String : String]?,completionHandler: (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void)
     {
         let url = NSURL(string: baseURL.absoluteString + path)!
-        Alamofire.request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers)).responseJSON(completionHandler:completionHandler)
+        Alamofire.request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers))
+                 .responseData(completionHandler)
         
     }
     
@@ -199,7 +200,7 @@ extension AlamofireAPIFactory : APICommunicator {
 
 extension AlamofireAPIFactory
 {
-    public static func completionHandler(innerHandler: APICommunicatorCompletionClosure?) -> (NSURLRequest?, NSHTTPURLResponse?, Result<AnyObject>) -> Void
+    public static func completionHandler(innerHandler: APICommunicatorCompletionClosure?) -> (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void
     {
         return
             {
@@ -207,18 +208,12 @@ extension AlamofireAPIFactory
                 switch result
                 {   //TODO : parse always returns success
                 case .Success(let value):
-                    let jsonData = JSON(value)
-                    guard (jsonData["error"].string == nil)
-                        else
-                    {
-                        let errorCode = jsonData["code"].int ?? 666
-                        let error : APICommunicatorError = APICommunicatorError.GeneralError(statusCode: errorCode, message: jsonData["error"].string!)
-                        innerHandler?(responseObject: nil, error: error)
-                        return
-                    }
-                    innerHandler?(responseObject: JSON(value), error: nil)
+                    
+                    innerHandler?(responseObject: value, error: nil)
                     break
+
                 case .Failure(_, let errorType):
+                
                     let error : APICommunicatorError =
                     {
                         let nsError = errorType as NSError

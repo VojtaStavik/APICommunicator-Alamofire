@@ -55,17 +55,26 @@ public enum ParamEncoding: CustomStringConvertible
 }
 
 
-public typealias APIRequestCompletionClosure = (responseObject: JSON?, error: APICommunicatorError?) -> Void
-public typealias APIRequestDataHandlerClosure = (responseObject: JSON?, error: APICommunicatorError?, context: NSManagedObjectContext?) -> Void
+public protocol APIResponseSerializer {
+    
+    static func serializeResponse(responseData: NSData?) -> Self?
+}
+
+
 public typealias APIRequestOperationIdentifier = String
 
-public class APIRequestOperation : NSOperation {
+public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
+
+    public typealias ResponseDataType = T
+    
+    public typealias CompletionClosure = (responseObject: ResponseDataType?, error: APICommunicatorError?) -> Void
+    public typealias DataHandlerClosure = (responseObject: ResponseDataType?, error: APICommunicatorError?, context: NSManagedObjectContext?) -> Void
     
     /**
     If nil, dataHandler is automatically called when request is finished. If you implement this, don't forget to call dataHandler manually. Defaul is nil.
     */
-    public var requestCompletionClosure : APIRequestCompletionClosure? = nil
-    public var dataHandler : APIRequestDataHandlerClosure? = nil
+    public var requestCompletionClosure : CompletionClosure? = nil
+    public var dataHandler : DataHandlerClosure? = nil
     
     public var didFinishiWithErrorClosure : ((APICommunicatorError?) -> Void)? = nil
     
@@ -73,7 +82,7 @@ public class APIRequestOperation : NSOperation {
     public var headers : [String: String]? = nil
     
     public var futureParameters : [String: Future]? = nil
-    public var futureHeaders : [String: ([APIRequestOperationIdentifier : JSON]) -> String]? = nil
+    public var futureHeaders : [String: ([APIRequestOperationIdentifier : AnyObject]) -> String]? = nil
     
     public var paramEncoding : ParamEncoding
     
@@ -215,14 +224,14 @@ public class APIRequestOperation : NSOperation {
                 
                 if let requestCompletionClosure = aSelf.requestCompletionClosure {
                     
-                    requestCompletionClosure(responseObject: responseObject, error: nil)
+                    requestCompletionClosure(responseObject: T.serializeResponse(responseObject), error: nil)
                     
                 } else {
                     
-                    aSelf.dataHandler?(responseObject: responseObject, error: nil, context: aSelf.context)
+                    aSelf.dataHandler?(responseObject:  T.serializeResponse(responseObject), error: nil, context: aSelf.context)
                 }
                 
-                aSelf.sharedUserInfo[aSelf.identifier] = responseObject
+                aSelf.sharedUserInfo[aSelf.identifier] = T.serializeResponse(responseObject) as? AnyObject
                 
                 aSelf.finish()
                 aSelf.communicatorError = error
@@ -304,11 +313,12 @@ public class APIRequestOperation : NSOperation {
 }
 
 
-extension APIRequestOperation : NSCopying {
+// TODO: How to implement NSCopying for generic class?
+extension APIRequestOperation {
     
-    public func copyWithZone(zone: NSZone) -> AnyObject {
+    public func copyOperation() -> APIRequestOperation<ResponseDataType> {
         
-        let copy = APIRequestOperation(communicator: communicator, path: path, method: method)
+        let copy = APIRequestOperation<ResponseDataType>(communicator: communicator, path: path, method: method)
         
         copy.requestCompletionClosure = requestCompletionClosure
         copy.dataHandler = dataHandler
@@ -336,7 +346,7 @@ extension APIRequestOperation : NSCopying {
 // this object between api operations
 public class UserInfoDictionary  {
     
-    public subscript(key: APIRequestOperationIdentifier) -> JSON?
+    public subscript(key: APIRequestOperationIdentifier) -> AnyObject?
         {
             get
             {
@@ -349,7 +359,7 @@ public class UserInfoDictionary  {
             }
         }
     
-    var data = [APIRequestOperationIdentifier : JSON]()
+    var data = [APIRequestOperationIdentifier : AnyObject]()
 }
 
 
@@ -396,13 +406,13 @@ public extension APIRequestOperation {
     
     public typealias Future = () -> AnyObject?
     
-    public func future(closure: (JSON -> AnyObject?)) -> Future {
+    public func future(closure: (ResponseDataType -> AnyObject?)) -> Future {
         
         return { [weak self] () -> AnyObject? in
             
             if let
                 aSelf = self,
-                data = self?.sharedUserInfo[aSelf.identifier]
+                data = self?.sharedUserInfo[aSelf.identifier] as? ResponseDataType
             {
                 return closure(data)
                 
@@ -414,3 +424,16 @@ public extension APIRequestOperation {
     }
 }
 
+
+
+// A protocol defining APIRequestOperation public interface
+// it's used for accessing values non-related to generic constraint
+public protocol APIRequestOperationProtocol {
+    
+    var activityIndicator: APIActivityIndicator?     { set get }
+    var context : NSManagedObjectContext?            { set get }
+    var communicatorError: APICommunicatorError?     { set get }
+    var copyNumber: Int                                  { get }
+}
+
+extension APIRequestOperation : APIRequestOperationProtocol { }

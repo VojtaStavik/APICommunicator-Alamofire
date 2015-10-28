@@ -53,7 +53,7 @@ public extension Array where Element : NSOperation
                                                 
                                                 for operation in self
                                                 {
-                                                    if let error = (operation as? APIRequestOperation)?.communicatorError
+                                                    if let error = (operation as? APIRequestOperationProtocol)?.communicatorError
                                                     {
                                                         errors.append(error)
                                                     }
@@ -73,7 +73,8 @@ public extension Array where Element : NSOperation
             // I would either create subbclass of Array (stupid) or
             // solve it this way. I'm not happy about this but I can't
             // find any other solution now
-            (operation as? APIRequestOperation)?.activityIndicator = indicator
+            var mutableOperation = operation as? APIRequestOperationProtocol
+            mutableOperation?.activityIndicator = indicator
         }
         
         self = [activityStartedOperation] + self + [activityFinishedOperation]
@@ -88,13 +89,14 @@ public extension Array where Element : NSOperation
         {
             for operation in self
             {
-                (operation as? APIRequestOperation)?.context = context
+                var mutableOperation = operation as? APIRequestOperationProtocol
+                mutableOperation?.context = context
             }
         }
 
         get
         {
-            return (self.first as? APIRequestOperation)?.context
+            return (self.first as? APIRequestOperationProtocol)?.context
         }
     }
     
@@ -114,7 +116,7 @@ public extension Array where Element : NSOperation
                         
                         for operation in self
                         {
-                            if let error = (operation as? APIRequestOperation)?.communicatorError
+                            if let error = (operation as? APIRequestOperationProtocol)?.communicatorError
                             {
                                 errors.append(error)
                             }
