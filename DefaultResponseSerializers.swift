@@ -7,3 +7,15 @@
 //
 
 import Foundation
+import SwiftyJSON
+
+public extension JSON : APIResponseSerializer {
+    
+    public static func serializeResponse(responseData: NSData?) -> JSON? {
+
+        guard let data = responseData else { return nil }
+            
+        return JSON(data: data)
+    }
+}
+
