@@ -72,7 +72,7 @@ public class APIRequestOperation : NSOperation {
     public var parameters : [String: AnyObject]? = nil
     public var headers : [String: String]? = nil
     
-    public var futureParameters : [String: ([APIRequestOperationIdentifier : JSON]) -> AnyObject]? = nil
+    public var futureParameters : [String: Future]? = nil
     public var futureHeaders : [String: ([APIRequestOperationIdentifier : JSON]) -> String]? = nil
     
     public var paramEncoding : ParamEncoding
