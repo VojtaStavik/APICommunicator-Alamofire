@@ -389,3 +389,28 @@ extension String
             return substringWithRange(Range(start: startIndex.advancedBy(r.startIndex), end: startIndex.advancedBy(r.endIndex)))
     }
 }
+
+
+
+public extension APIRequestOperation {
+    
+    public typealias Future = () -> AnyObject?
+    
+    public func future(closure: (JSON -> AnyObject?)) -> Future {
+        
+        return { [weak self] () -> AnyObject? in
+            
+            if let
+                aSelf = self,
+                data = self?.sharedUserInfo[aSelf.identifier]
+            {
+                return closure(data)
+                
+            } else {
+                
+                return nil
+            }
+        }
+    }
+}
+
