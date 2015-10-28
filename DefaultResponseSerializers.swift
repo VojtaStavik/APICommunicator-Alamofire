@@ -9,7 +9,7 @@
 import Foundation
 import SwiftyJSON
 
-public extension JSON : APIResponseSerializer {
+extension JSON : APIResponseSerializer {
     
     public static func serializeResponse(responseData: NSData?) -> JSON? {
 
