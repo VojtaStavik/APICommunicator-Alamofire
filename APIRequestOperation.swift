@@ -150,7 +150,7 @@ public class APIRequestOperation : NSOperation {
             
             for (key, value) in futureParameters
             {
-                parameters![key] = value(sharedUserInfo.data)
+                parameters![key] = value()
             }
         }
         
