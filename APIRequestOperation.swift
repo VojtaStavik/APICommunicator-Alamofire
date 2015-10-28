@@ -336,7 +336,7 @@ extension APIRequestOperation : NSCopying {
 // this object between api operations
 public class UserInfoDictionary  {
     
-    subscript(key: APIRequestOperationIdentifier) -> JSON?
+    public subscript(key: APIRequestOperationIdentifier) -> JSON?
         {
             get
             {
