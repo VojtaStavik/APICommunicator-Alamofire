@@ -134,6 +134,7 @@ public class AlamofireAPIFactory
     func sendAlamofireRequest(method: Alamofire.Method, path: String, parameters: [String : AnyObject]?, encoding: ParameterEncoding, options: NSJSONReadingOptions = .AllowFragments, headers: [String : String]?,completionHandler: (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void)
     {
         let url = NSURL(string: baseURL.absoluteString + path)!
+        
         Alamofire.request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers))
                  .responseData(completionHandler)
         

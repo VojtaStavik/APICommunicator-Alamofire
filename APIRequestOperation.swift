@@ -35,12 +35,6 @@ public protocol APIResponseSerializer {
 }
 
 
-public protocol APIResponseSerializer {
-    
-    static func serializeResponse(responseData: NSData?) -> Self?
-}
-
-
 public typealias APIRequestOperationIdentifier = String
 
 public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
@@ -61,8 +55,8 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
     public var parameters : [String: AnyObject]? = nil
     public var headers : [String: String]? = nil
     
-    public var futureParameters : [String: Future]? = nil
-    public var futureHeaders : [String: ([APIRequestOperationIdentifier : AnyObject]) -> String]? = nil
+    public var futureParameters : [String: FutureEvaluatable]? = nil
+    public var futureHeaders : [String: ([APIRequestOperationIdentifier : APIResponseSerializer]) -> String]? = nil
     
     public var paramEncoding : ParamEncoding
     
@@ -148,7 +142,10 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
             
             for (key, value) in futureParameters
             {
-                parameters![key] = value()
+                if let object = value.evaluate as? AnyObject {
+                    
+                    parameters![key] = object
+                }
             }
         }
         
@@ -234,8 +231,6 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
                     
                     aSelf.dataHandler?(responseObject:  T.serializeResponse(responseObject), error: nil, context: aSelf.context)
                 }
-                
-                aSelf.sharedUserInfo[aSelf.identifier] = T.serializeResponse(responseObject) as? AnyObject
                 
                 aSelf.finish()
                 aSelf.communicatorError = error
