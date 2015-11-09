@@ -10,7 +10,7 @@ import SwiftyJSON
 import CoreData
 
 
-public enum HTTPMethod : CustomStringConvertible {
+public enum HTTPMethod : String {
     
     case GET
     case POST
@@ -18,62 +18,45 @@ public enum HTTPMethod : CustomStringConvertible {
     case PATCH
     case DELETE
     case NONE
-    
-    public var description: String {
-        
-        switch self {
-            
-        case .GET:      return "GET"
-        case .POST:     return "POST"
-        case .PUT:      return "PUT"
-        case .PATCH:    return "PATCH"
-        case .DELETE:   return "DELETE"
-        case .NONE:     return "NONE"
-            
-        }
-    }
 }
+
 
 //: TODO add more encodings
-public enum ParamEncoding: CustomStringConvertible
-{
+public enum ParamEncoding: String {
+    
     case JSON
     case URL
-    
-    public var description: String
-    {
-    
-        switch self
-        {
-        case .JSON:
-            return "GET"
-        case .URL:
-            return "POST"
-        }
-    }
-
 }
 
 
-public typealias APIRequestCompletionClosure = (responseObject: JSON?, error: APICommunicatorError?) -> Void
-public typealias APIRequestDataHandlerClosure = (responseObject: JSON?, error: APICommunicatorError?, context: NSManagedObjectContext?) -> Void
+public protocol APIResponseSerializer {
+    
+    static func serializeResponse(responseData: NSData?) -> Self?
+}
+
+
 public typealias APIRequestOperationIdentifier = String
 
-public class APIRequestOperation : NSOperation {
+public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
+
+    public typealias ResponseDataType = T
+    
+    public typealias CompletionClosure = (responseObject: ResponseDataType?, error: APICommunicatorError?) -> Void
+    public typealias DataHandlerClosure = (responseObject: ResponseDataType?, error: APICommunicatorError?, context: NSManagedObjectContext?) -> Void
     
     /**
     If nil, dataHandler is automatically called when request is finished. If you implement this, don't forget to call dataHandler manually. Defaul is nil.
     */
-    public var requestCompletionClosure : APIRequestCompletionClosure? = nil
-    public var dataHandler : APIRequestDataHandlerClosure? = nil
+    public var requestCompletionClosure : CompletionClosure? = nil
+    public var dataHandler : DataHandlerClosure? = nil
     
     public var didFinishiWithErrorClosure : ((APICommunicatorError?) -> Void)? = nil
     
     public var parameters : [String: AnyObject]? = nil
     public var headers : [String: String]? = nil
     
-    public var futureParameters : [String: ([APIRequestOperationIdentifier : JSON]) -> AnyObject]? = nil
-    public var futureHeaders : [String: ([APIRequestOperationIdentifier : JSON]) -> String]? = nil
+    public var futureParameters : [String: FutureEvaluatable]? = nil
+    public var futureHeaders : [String: ([APIRequestOperationIdentifier : APIResponseSerializer]) -> String]? = nil
     
     public var paramEncoding : ParamEncoding
     
@@ -90,8 +73,18 @@ public class APIRequestOperation : NSOperation {
     
     public var copyNumber = 0
     
+    public var currentProgress : Float = 0 {
+        
+        didSet {
+            
+            updateProgressClosure?(currentProgress: currentProgress)
+        }
+    }
+    
     public var sharedUserInfo = UserInfoDictionary()
     public var communicatorError: APICommunicatorError? = nil
+    
+    public var updateProgressClosure : ((currentProgress: Float) -> ())?
     
     lazy public var identifier : APIRequestOperationIdentifier =
         {
@@ -102,10 +95,8 @@ public class APIRequestOperation : NSOperation {
     let communicator : APICommunicator
     let method : HTTPMethod
     let path : String
+    let customCallClosure : APICommunicatorCustomCallClosure?
     
-    
-    //for custom calls
-    var communicatorExecClosure : APICommunicatorCustomCallClosure?
     
     public init(communicator: APICommunicator, path: String, method: HTTPMethod, paramEncoding : ParamEncoding? = ParamEncoding.JSON) {
         
@@ -113,17 +104,17 @@ public class APIRequestOperation : NSOperation {
         self.method = method
         self.path = path
         self.paramEncoding = paramEncoding ?? .JSON
-        self.communicatorExecClosure = nil
+        self.customCallClosure = nil
         super.init()
     }
     
-    public init(communicator: APICommunicator, communicatorExecClosure : APICommunicatorCustomCallClosure)
+    public init(communicator: APICommunicator, customCallClosure : APICommunicatorCustomCallClosure)
     {
         self.communicator = communicator
         self.method = .NONE
         self.path = ""
         self.paramEncoding = .JSON
-        self.communicatorExecClosure = communicatorExecClosure
+        self.customCallClosure = customCallClosure
     }
     
     var currentApiCommunicatorOperation : NSOperation? = nil
@@ -132,6 +123,7 @@ public class APIRequestOperation : NSOperation {
     {
 
         executing = true
+        currentProgress = 0
         
         // evaluate future headers and parameters
         if let futureHeaders = futureHeaders
@@ -146,39 +138,50 @@ public class APIRequestOperation : NSOperation {
         
         if let futureParameters = futureParameters
         {
-            parameters = parameters ?? [String:String]()
+            parameters = parameters ?? [String:AnyObject]()
             
             for (key, value) in futureParameters
             {
-                parameters![key] = value(sharedUserInfo.data)
+                if let object = value.evaluate as? AnyObject {
+                    
+                    parameters![key] = object
+                }
             }
         }
         
         
-        //custom exectuion cloasure
-        if(self.communicatorExecClosure != nil)
-        {
-            self.currentApiCommunicatorOperation = communicator.performCustomCall(self.communicatorExecClosure!, completion: innerCompletion)
+
+        // progress closure
+        let updateProgress : ProgressUpdateClosure = { [weak self] progress in
+        
+            self?.currentProgress = progress
         }
-        else
-        {
-            switch method
-            {
+        
+        
+        if let customCallClosure = customCallClosure {
+        
+            // Execute custom call closure if any
+            self.currentApiCommunicatorOperation = communicator.performCustomCall(customCallClosure, progress: updateProgress, completion: innerCompletion)
+        }
+            
+        else {
+            
+            switch method {
                 
             case .GET:
-                currentApiCommunicatorOperation = communicator.get(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, completion: innerCompletion)
+                currentApiCommunicatorOperation = communicator.get(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, progress: updateProgress, completion: innerCompletion)
                 
             case .POST:
-                currentApiCommunicatorOperation = communicator.post(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, completion: innerCompletion)
+                currentApiCommunicatorOperation = communicator.post(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, progress: updateProgress, completion: innerCompletion)
                 
             case .PUT:
-                currentApiCommunicatorOperation = communicator.put(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, completion: innerCompletion)
+                currentApiCommunicatorOperation = communicator.put(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, progress: updateProgress, completion: innerCompletion)
                 
             case .PATCH:
-                currentApiCommunicatorOperation = communicator.patch(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, completion: innerCompletion)
+                currentApiCommunicatorOperation = communicator.patch(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, progress: updateProgress, completion: innerCompletion)
                 
             case .DELETE:
-                currentApiCommunicatorOperation = communicator.delete(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, completion: innerCompletion)
+                currentApiCommunicatorOperation = communicator.delete(path, parameters: parameters, headers: headers, paramEncoding: paramEncoding, progress: updateProgress, completion: innerCompletion)
             case .NONE:
                 break
             }
@@ -192,6 +195,13 @@ public class APIRequestOperation : NSOperation {
         
         dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0))
             {
+                if let
+                    serializedData = T.serializeResponse(responseObject),
+                    aSelf = self
+                {
+                    aSelf.sharedUserInfo[aSelf.identifier] = serializedData
+                }
+                
                 guard let responseObject = responseObject else {
                     
                     if let requestCompletionClosure = self?.requestCompletionClosure {
@@ -215,14 +225,12 @@ public class APIRequestOperation : NSOperation {
                 
                 if let requestCompletionClosure = aSelf.requestCompletionClosure {
                     
-                    requestCompletionClosure(responseObject: responseObject, error: nil)
+                    requestCompletionClosure(responseObject: T.serializeResponse(responseObject), error: nil)
                     
                 } else {
                     
-                    aSelf.dataHandler?(responseObject: responseObject, error: nil, context: aSelf.context)
+                    aSelf.dataHandler?(responseObject:  T.serializeResponse(responseObject), error: nil, context: aSelf.context)
                 }
-                
-                aSelf.sharedUserInfo[aSelf.identifier] = responseObject
                 
                 aSelf.finish()
                 aSelf.communicatorError = error
@@ -233,6 +241,8 @@ public class APIRequestOperation : NSOperation {
     
     func finish() {
         
+        currentProgress = 1
+        
         executing = false
         finished = true
         
@@ -240,17 +250,19 @@ public class APIRequestOperation : NSOperation {
     }
     
     
-    func releaseReferences()
-    {
+    func releaseReferences() {
+        
         futureParameters = nil
         futureHeaders = nil
-        communicatorExecClosure = nil
     }
+    
     
     public override func cancel() {
         
         super.cancel()
         currentApiCommunicatorOperation?.cancel()
+
+        currentProgress = 1
         
         releaseReferences()
     }
@@ -304,11 +316,21 @@ public class APIRequestOperation : NSOperation {
 }
 
 
-extension APIRequestOperation : NSCopying {
+// TODO: How to implement NSCopying for generic class?
+extension APIRequestOperation {
     
-    public func copyWithZone(zone: NSZone) -> AnyObject {
+    public func copyOperation() -> APIRequestOperation<ResponseDataType> {
         
-        let copy = APIRequestOperation(communicator: communicator, path: path, method: method)
+        let copy : APIRequestOperation<ResponseDataType>
+        
+        if let customCallClosure = customCallClosure {
+            
+            copy = APIRequestOperation<ResponseDataType>(communicator: communicator, customCallClosure: customCallClosure)
+            
+        } else {
+            
+            copy = APIRequestOperation<ResponseDataType>(communicator: communicator, path: path, method: method)
+        }
         
         copy.requestCompletionClosure = requestCompletionClosure
         copy.dataHandler = dataHandler
@@ -316,7 +338,6 @@ extension APIRequestOperation : NSCopying {
         copy.activityIndicator = activityIndicator
         
         copy.didFinishiWithErrorClosure = didFinishiWithErrorClosure
-        copy.communicatorExecClosure = communicatorExecClosure
         
         copy.parameters = parameters
         copy.headers = headers
@@ -336,7 +357,7 @@ extension APIRequestOperation : NSCopying {
 // this object between api operations
 public class UserInfoDictionary  {
     
-    subscript(key: APIRequestOperationIdentifier) -> JSON?
+    public subscript(key: APIRequestOperationIdentifier) -> APIResponseSerializer?
         {
             get
             {
@@ -349,7 +370,7 @@ public class UserInfoDictionary  {
             }
         }
     
-    var data = [APIRequestOperationIdentifier : JSON]()
+    var data = [APIRequestOperationIdentifier : APIResponseSerializer]()
 }
 
 
@@ -389,3 +410,22 @@ extension String
             return substringWithRange(Range(start: startIndex.advancedBy(r.startIndex), end: startIndex.advancedBy(r.endIndex)))
     }
 }
+
+
+
+
+
+// A protocol defining APIRequestOperation public interface
+// it's used for accessing non-generic values 
+
+public protocol APIRequestOperationProtocol {
+    
+    var activityIndicator: APIActivityIndicator?     { set get }
+    var context : NSManagedObjectContext?            { set get }
+    var communicatorError: APICommunicatorError?     { set get }
+    var copyNumber: Int                                  { get }
+    var updateProgressClosure : ((currentProgress: Float) -> ())? { set get }
+}
+
+extension APIRequestOperation : APIRequestOperationProtocol { }
+

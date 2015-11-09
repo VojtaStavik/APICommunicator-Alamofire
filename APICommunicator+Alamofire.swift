@@ -131,10 +131,12 @@ public class AlamofireAPIFactory
     
     // MARK: - Alamofire
     
-    func sendAlamofireRequest(method: Alamofire.Method, path: String, parameters: [String : AnyObject]?, encoding: ParameterEncoding, options: NSJSONReadingOptions = .AllowFragments, headers: [String : String]?,completionHandler: (NSURLRequest?, NSHTTPURLResponse?, Result<AnyObject>) -> Void)
+    func sendAlamofireRequest(method: Alamofire.Method, path: String, parameters: [String : AnyObject]?, encoding: ParameterEncoding, options: NSJSONReadingOptions = .AllowFragments, headers: [String : String]?,completionHandler: (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void)
     {
         let url = NSURL(string: baseURL.absoluteString + path)!
-        Alamofire.request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers)).responseJSON(completionHandler:completionHandler)
+        
+        Alamofire.request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers))
+                 .responseData(completionHandler)
         
     }
     
@@ -144,43 +146,43 @@ public class AlamofireAPIFactory
 
 extension AlamofireAPIFactory : APICommunicator {
     
-    public func get(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    public func get(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
     {
         sendAlamofireRequest(.GET, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
         return nil
     }
     
-    public func post(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    public func post(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
     {
         
         sendAlamofireRequest(.POST, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
         return nil
     }
     
-    public func put(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    public func put(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
     {
         
         sendAlamofireRequest(.PUT, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
         return nil
     }
     
-    public func patch(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    public func patch(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
     {
         
         sendAlamofireRequest(.PATCH, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
         return nil
     }
     
-    public func delete(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    public func delete(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
     {
         
         sendAlamofireRequest(.DELETE, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
         return nil
     }
     
-    public func performCustomCall(callClosure: APICommunicatorCustomCallClosure, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    public func performCustomCall(callClosure: APICommunicatorCustomCallClosure, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
     {
-        callClosure(completion)
+        callClosure(progress: progress, completion: completion)
         return nil
     }
     
@@ -199,7 +201,7 @@ extension AlamofireAPIFactory : APICommunicator {
 
 extension AlamofireAPIFactory
 {
-    public static func completionHandler(innerHandler: APICommunicatorCompletionClosure?) -> (NSURLRequest?, NSHTTPURLResponse?, Result<AnyObject>) -> Void
+    public static func completionHandler(innerHandler: APICommunicatorCompletionClosure?) -> (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void
     {
         return
             {
@@ -207,18 +209,12 @@ extension AlamofireAPIFactory
                 switch result
                 {   //TODO : parse always returns success
                 case .Success(let value):
-                    let jsonData = JSON(value)
-                    guard (jsonData["error"].string == nil)
-                        else
-                    {
-                        let errorCode = jsonData["code"].int ?? 666
-                        let error : APICommunicatorError = APICommunicatorError.GeneralError(statusCode: errorCode, message: jsonData["error"].string!)
-                        innerHandler?(responseObject: nil, error: error)
-                        return
-                    }
-                    innerHandler?(responseObject: JSON(value), error: nil)
+                    
+                    innerHandler?(responseObject: value, error: nil)
                     break
+
                 case .Failure(_, let errorType):
+                
                     let error : APICommunicatorError =
                     {
                         let nsError = errorType as NSError

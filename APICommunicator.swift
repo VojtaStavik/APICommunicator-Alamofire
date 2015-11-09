@@ -6,22 +6,22 @@
 //
 
 import Foundation
-import SwiftyJSON
 
-public typealias APICommunicatorCompletionClosure = (responseObject: JSON?, error: APICommunicatorError?) -> Void
-public typealias APICommunicatorCustomCallClosure = (APICommunicatorCompletionClosure?) -> ()
+public typealias ProgressUpdateClosure = Float -> Void
+public typealias APICommunicatorCompletionClosure = (responseObject: NSData?, error: APICommunicatorError?) -> Void
+public typealias APICommunicatorCustomCallClosure = (progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> ()
 
 
-public protocol APICommunicator : class{
+public protocol APICommunicator : class {
     
     init(baseURL: NSURL!)
     
-    func get(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    func post(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    func put(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    func patch(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    func delete(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    func performCustomCall(callClosure: APICommunicatorCustomCallClosure, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    func get(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    func post(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?,  completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    func put(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    func patch(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    func delete(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
+    func performCustomCall(callClosure: APICommunicatorCustomCallClosure, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
     
 }
 

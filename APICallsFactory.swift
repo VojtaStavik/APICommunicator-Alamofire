@@ -16,9 +16,9 @@ public protocol APICallsFactory : APICommunicator {
 
 public extension APICallsFactory {
     
-    public func newOperation(path: String, method: HTTPMethod, paramEncoding: ParamEncoding? = nil) -> APIRequestOperation
+    public func newOperation<T: APIResponseSerializer>(path: String, method: HTTPMethod, paramEncoding: ParamEncoding? = nil) -> APIRequestOperation<T>
     {
-        let operation = APIRequestOperation(communicator: self, path: path, method: method, paramEncoding: paramEncoding ?? .JSON) // FIXME: Proper encoding
+        let operation = APIRequestOperation<T>(communicator: self, path: path, method: method, paramEncoding: paramEncoding ?? .JSON) // FIXME: Proper encoding
         
         addPredefinedHeaders(operation)
         addPredefinedParameters(operation)
@@ -27,9 +27,9 @@ public extension APICallsFactory {
     }
     
     
-    public func newOperation(customExecClosure : APICommunicatorCustomCallClosure) -> APIRequestOperation
+    public func newOperation<T: APIResponseSerializer>(customExecClosure : APICommunicatorCustomCallClosure) -> APIRequestOperation<T>
     {
-        let operation = APIRequestOperation(communicator: self, communicatorExecClosure: customExecClosure)
+        let operation = APIRequestOperation<T>(communicator: self, customCallClosure: customExecClosure)
         
         addPredefinedHeaders(operation)
         addPredefinedParameters(operation)
@@ -39,7 +39,7 @@ public extension APICallsFactory {
 
     
     
-    public func addPredefinedHeaders(operation: APIRequestOperation) -> APIRequestOperation {
+    public func addPredefinedHeaders<T: APIResponseSerializer>(operation: APIRequestOperation<T>) -> APIRequestOperation<T> {
         
         if let predefinedHeaders = predefinedHeaders {
             
@@ -56,7 +56,7 @@ public extension APICallsFactory {
     }
     
     
-    public func addPredefinedParameters(operation: APIRequestOperation) -> APIRequestOperation {
+    public func addPredefinedParameters<T: APIResponseSerializer>(operation: APIRequestOperation<T>) -> APIRequestOperation<T> {
         
         if let predefinedParameters = predefinedParameters {
             
