@@ -35,12 +35,15 @@ public protocol APIResponseSerializer {
 }
 
 
+<<<<<<< HEAD
+=======
 public protocol APIResponseSerializer {
     
     static func serializeResponse(responseData: NSData?) -> Self?
 }
 
 
+>>>>>>> cfb7a49a3a0174ffa69e6f1a893962e4b1dad11e
 public typealias APIRequestOperationIdentifier = String
 
 public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
@@ -61,8 +64,13 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
     public var parameters : [String: AnyObject]? = nil
     public var headers : [String: String]? = nil
     
+<<<<<<< HEAD
+    public var futureParameters : [String: FutureEvaluatable]? = nil
+    public var futureHeaders : [String: ([APIRequestOperationIdentifier : APIResponseSerializer]) -> String]? = nil
+=======
     public var futureParameters : [String: Future]? = nil
     public var futureHeaders : [String: ([APIRequestOperationIdentifier : AnyObject]) -> String]? = nil
+>>>>>>> cfb7a49a3a0174ffa69e6f1a893962e4b1dad11e
     
     public var paramEncoding : ParamEncoding
     
@@ -148,7 +156,14 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
             
             for (key, value) in futureParameters
             {
+<<<<<<< HEAD
+                if let object = value.evaluate as? AnyObject {
+                    
+                    parameters![key] = object
+                }
+=======
                 parameters![key] = value()
+>>>>>>> cfb7a49a3a0174ffa69e6f1a893962e4b1dad11e
             }
         }
         
@@ -235,8 +250,11 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
                     aSelf.dataHandler?(responseObject:  T.serializeResponse(responseObject), error: nil, context: aSelf.context)
                 }
                 
+<<<<<<< HEAD
+=======
                 aSelf.sharedUserInfo[aSelf.identifier] = T.serializeResponse(responseObject) as? AnyObject
                 
+>>>>>>> cfb7a49a3a0174ffa69e6f1a893962e4b1dad11e
                 aSelf.finish()
                 aSelf.communicatorError = error
 
@@ -326,6 +344,7 @@ extension APIRequestOperation {
     
     public func copyOperation() -> APIRequestOperation<ResponseDataType> {
         
+<<<<<<< HEAD
         let copy : APIRequestOperation<ResponseDataType>
         
         if let customCallClosure = customCallClosure {
@@ -336,6 +355,9 @@ extension APIRequestOperation {
             
             copy = APIRequestOperation<ResponseDataType>(communicator: communicator, path: path, method: method)
         }
+=======
+        let copy = APIRequestOperation<ResponseDataType>(communicator: communicator, path: path, method: method)
+>>>>>>> cfb7a49a3a0174ffa69e6f1a893962e4b1dad11e
         
         copy.requestCompletionClosure = requestCompletionClosure
         copy.dataHandler = dataHandler
@@ -362,7 +384,11 @@ extension APIRequestOperation {
 // this object between api operations
 public class UserInfoDictionary  {
     
+<<<<<<< HEAD
     public subscript(key: APIRequestOperationIdentifier) -> APIResponseSerializer?
+=======
+    public subscript(key: APIRequestOperationIdentifier) -> AnyObject?
+>>>>>>> cfb7a49a3a0174ffa69e6f1a893962e4b1dad11e
         {
             get
             {
@@ -375,7 +401,11 @@ public class UserInfoDictionary  {
             }
         }
     
+<<<<<<< HEAD
     var data = [APIRequestOperationIdentifier : APIResponseSerializer]()
+=======
+    var data = [APIRequestOperationIdentifier : AnyObject]()
+>>>>>>> cfb7a49a3a0174ffa69e6f1a893962e4b1dad11e
 }
 
 
@@ -418,19 +448,54 @@ extension String
 
 
 
+<<<<<<< HEAD
 
 
 // A protocol defining APIRequestOperation public interface
 // it's used for accessing non-generic values 
 
+=======
+public extension APIRequestOperation {
+    
+    public typealias Future = () -> AnyObject?
+    
+    public func future(closure: (ResponseDataType -> AnyObject?)) -> Future {
+        
+        return { [weak self] () -> AnyObject? in
+            
+            if let
+                aSelf = self,
+                data = self?.sharedUserInfo[aSelf.identifier] as? ResponseDataType
+            {
+                return closure(data)
+                
+            } else {
+                
+                return nil
+            }
+        }
+    }
+}
+
+
+
+// A protocol defining APIRequestOperation public interface
+// it's used for accessing values non-related to generic constraint
+>>>>>>> cfb7a49a3a0174ffa69e6f1a893962e4b1dad11e
 public protocol APIRequestOperationProtocol {
     
     var activityIndicator: APIActivityIndicator?     { set get }
     var context : NSManagedObjectContext?            { set get }
     var communicatorError: APICommunicatorError?     { set get }
     var copyNumber: Int                                  { get }
+<<<<<<< HEAD
     var updateProgressClosure : ((currentProgress: Float) -> ())? { set get }
 }
 
 extension APIRequestOperation : APIRequestOperationProtocol { }
 
+=======
+}
+
+extension APIRequestOperation : APIRequestOperationProtocol { }
+>>>>>>> cfb7a49a3a0174ffa69e6f1a893962e4b1dad11e
