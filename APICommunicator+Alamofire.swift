@@ -133,16 +133,18 @@ public class AlamofireAPIFactory
     
     func sendAlamofireRequest(method: Alamofire.Method, path: String, parameters: [String : AnyObject]?, encoding: ParameterEncoding, options: NSJSONReadingOptions = .AllowFragments, headers: [String : String]?,completionHandler: (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void)
     {
-        let url = NSURL(string: baseURL.absoluteString + path)!
+        guard let url = NSURL(string: baseURL.absoluteString + path)
+        else {
+            
+            completionHandler(nil, nil, Result.Failure(nil, APICommunicatorError.GeneralError(statusCode: 0, message: "Invalid URL")))
+            return
+        }
         
         Alamofire.request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers))
                  .responseData(completionHandler)
-        
     }
-    
-    
-    
 }
+
 
 extension AlamofireAPIFactory : APICommunicator {
     

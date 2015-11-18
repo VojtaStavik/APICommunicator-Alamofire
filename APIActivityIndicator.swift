@@ -8,7 +8,7 @@
 import Foundation
 
 
-public protocol APIActivityIndicator {
+public protocol APIActivityIndicator : class {
     
     func apiCallStarted()
     func apiCallProgressUpdated(progress: Float)

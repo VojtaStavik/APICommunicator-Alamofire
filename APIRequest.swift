@@ -33,7 +33,7 @@ public extension Array where Element : NSOperation
     }
     
     
-    mutating public func activityIndicator(indicator: APIActivityIndicator) -> APIRequest
+    mutating public func activityIndicator(indicator: APIActivityIndicator?) -> APIRequest
     {
         let apiOperations = self.filter{ $0 is APIRequestOperationProtocol}
         
@@ -48,7 +48,7 @@ public extension Array where Element : NSOperation
         
             mutableOperation?.updateProgressClosure = { progress in
                 
-                indicator.apiCallProgressUpdated(completedPart + progress * step)
+                indicator?.apiCallProgressUpdated(completedPart + progress * step)
             }
         }
         
@@ -58,7 +58,7 @@ public extension Array where Element : NSOperation
                                             {
                                                 dispatch_async(dispatch_get_main_queue())
                                                     {
-                                                        indicator.apiCallStarted()
+                                                        indicator?.apiCallStarted()
                                                     }
 
                                             } as! Element
@@ -78,7 +78,7 @@ public extension Array where Element : NSOperation
                                                 
                                                 dispatch_async(dispatch_get_main_queue())
                                                     {
-                                                         indicator.apiCallFinished(errors)
+                                                         indicator?.apiCallFinished(errors)
                                                     }
                                                 
                                             } as! Element
