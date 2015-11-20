@@ -10,26 +10,25 @@ import CoreData
 
 public typealias APIRequest = Array<NSOperation>
 
-public extension Array where Element : NSOperation
-{
-    public func addToAPIQueue()
-    {
-        if let last = last
-        {
+public extension Array where Element : NSOperation {
+    
+    public func addToAPIQueue(queue: NSOperationQueue? = MainAPIQueue.queue) {
+        
+        if let last = last {
+            
             _ = chainOperation(last) // chain all operations
         }
         
-        for operation in self
-        {
-            if let queue = MainAPIQueue.queue {
-             
-                queue.addOperation(operation)
-
-            } else {
+        
+        guard let queue = queue
+            else {
                 
                 print("APICommunicator: WARNING! MainAPIQueue.queue is nil.")
-            }
+                return
         }
+        
+        
+        self.forEach { queue.addOperation($0) }
     }
     
     
