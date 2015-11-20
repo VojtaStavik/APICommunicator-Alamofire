@@ -12,7 +12,7 @@ public typealias APIRequest = Array<NSOperation>
 
 public extension Array where Element : NSOperation {
     
-    public func addToAPIQueue(queue: NSOperationQueue? = MainAPIQueue.queue) {
+    public func addToAPIQueue(queue: NSOperationQueue? = MainAPIQueue.queue, cancelOtherRequestsWithTheSameType: Bool = false) {
         
         if let last = last {
             
@@ -28,7 +28,15 @@ public extension Array where Element : NSOperation {
         }
         
         
-        self.forEach { queue.addOperation($0) }
+        if let requestIdentifier = self.requestIdentifier where cancelOtherRequestsWithTheSameType {
+            
+            queue.operations.flatMap { $0 as? APIRequestOperationProtocol }
+                            .filter  { $0.requestIdentifier == requestIdentifier }
+                            .forEach { $0.cancel() }
+        }
+        
+        
+        queue.addOperations(self, waitUntilFinished: false)
     }
     
     
@@ -113,6 +121,24 @@ public extension Array where Element : NSOperation {
         get
         {
             return (self.first as? APIRequestOperationProtocol)?.context
+        }
+    }
+
+
+    public var requestIdentifier : String? {
+        
+        set {
+            
+            forEach {
+                
+                var mutableOperation = $0 as? APIRequestOperationProtocol
+                mutableOperation?.requestIdentifier = newValue
+            }
+        }
+        
+        get {
+            
+            return self.flatMap{ $0 as? APIRequestOperationProtocol }.first?.requestIdentifier
         }
     }
     

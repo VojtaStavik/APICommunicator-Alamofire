@@ -86,6 +86,8 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
     
     public var updateProgressClosure : ((currentProgress: Float) -> ())?
     
+    public var requestIdentifier: String? = nil
+    
     lazy public var identifier : APIRequestOperationIdentifier =
         {
             return self.randomStringWithLength(15)
@@ -119,8 +121,13 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
     
     var currentApiCommunicatorOperation : NSOperation? = nil
     
-    public override func start()
-    {
+    public override func start() {
+        
+        if cancelled {
+            
+            finish()
+            return
+        }
 
         executing = true
         currentProgress = 0
@@ -336,6 +343,7 @@ extension APIRequestOperation {
         copy.dataHandler = dataHandler
         
         copy.activityIndicator = activityIndicator
+        copy.requestIdentifier = requestIdentifier
         
         copy.didFinishiWithErrorClosure = didFinishiWithErrorClosure
         
@@ -425,7 +433,11 @@ public protocol APIRequestOperationProtocol {
     var communicatorError: APICommunicatorError?     { set get }
     var copyNumber: Int                                  { get }
     var updateProgressClosure : ((currentProgress: Float) -> ())? { set get }
+    var requestIdentifier: String?                   { set get }
+    
+    func cancel()
 }
+
 
 extension APIRequestOperation : APIRequestOperationProtocol { }
 
