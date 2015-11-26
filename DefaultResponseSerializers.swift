@@ -12,10 +12,22 @@ import SwiftyJSON
 extension JSON : APIResponseSerializer {
     
     public static func serializeResponse(responseData: NSData?) -> JSON? {
-
+        
         guard let data = responseData else { return nil }
+        
+        if let dictionary = NSKeyedUnarchiver.unarchiveObjectWithData(data) as? NSDictionary {
             
-        return JSON(data: data)
+            return JSON(dictionary)
+        }
+        
+        var error : NSError?
+        let json = JSON(data: data, options: .AllowFragments, error: &error)
+        if let error = error {
+            
+            print("EROR while JSON parsing: \(error.localizedDescription)")
+        }
+        
+        return json
     }
 }
 
@@ -27,6 +39,19 @@ extension Array : APIResponseSerializer {
         
         guard let data = responseData else { return nil }
         
+        // TODO: Needs proper testing
         return NSKeyedUnarchiver.unarchiveObjectWithData(data) as? Array<Element>
+    }
+}
+
+
+
+extension String : APIResponseSerializer {
+    
+    public static func serializeResponse(responseData: NSData?) -> String? {
+        
+        guard let data = responseData else { return nil }
+        
+        return String(data: data, encoding: NSUTF8StringEncoding)
     }
 }

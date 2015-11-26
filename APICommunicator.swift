@@ -25,9 +25,11 @@ public protocol APICommunicator : class {
     
 }
 
+
 public enum APICommunicatorError : ErrorType {
     
     case NoInternetConnection
+    case APIError(statusCode: Int, responseData: NSData?)
     case GeneralError(statusCode: Int , message: String)
 }
 

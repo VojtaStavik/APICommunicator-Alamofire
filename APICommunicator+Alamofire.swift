@@ -129,19 +129,26 @@ public class AlamofireAPIFactory
     
     let baseURL: NSURL
     
+    
+    /**
+     Provide your custom response serializer, if you want to handle your server responses differently
+     */
+    public var responseSerializer = APICommunicatorDefaultResponseSerializer()
+    
+    
     // MARK: - Alamofire
     
     func sendAlamofireRequest(method: Alamofire.Method, path: String, parameters: [String : AnyObject]?, encoding: ParameterEncoding, options: NSJSONReadingOptions = .AllowFragments, headers: [String : String]?,completionHandler: (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void)
     {
         guard let url = NSURL(string: baseURL.absoluteString + path)
-        else {
-            
-            completionHandler(nil, nil, Result.Failure(nil, APICommunicatorError.GeneralError(statusCode: 0, message: "Invalid URL")))
-            return
+            else {
+                
+                completionHandler(nil, nil, Result.Failure(nil, APICommunicatorError.GeneralError(statusCode: 0, message: "Invalid URL")))
+                return
         }
         
         Alamofire.request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers))
-                 .responseData(completionHandler)
+                 .response(responseSerializer: responseSerializer, completionHandler: completionHandler)
     }
 }
 
@@ -201,34 +208,53 @@ extension AlamofireAPIFactory : APICommunicator {
 }
 
 
-extension AlamofireAPIFactory
-{
-    public static func completionHandler(innerHandler: APICommunicatorCompletionClosure?) -> (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void
-    {
-        return
-            {
-                (request, response, result) -> Void in
-                switch result
-                {   //TODO : parse always returns success
-                case .Success(let value):
-                    
-                    innerHandler?(responseObject: value, error: nil)
-                    break
+extension AlamofireAPIFactory {
 
-                case .Failure(_, let errorType):
+    public static func completionHandler(innerHandler: APICommunicatorCompletionClosure?) -> (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void {
+        
+        return { (request, response, result) -> Void in
+
+            switch result {
+
+            case .Success(let value):
+                innerHandler?(responseObject: value, error: nil)
+                break
+
+            case .Failure(_, let errorType):
+                innerHandler?(responseObject: nil, error: errorType as? APICommunicatorError)
+                break
+            }
+        }
+    }
+}
+
+
+public struct APICommunicatorDefaultResponseSerializer : ResponseSerializer {
+    
+    public typealias SerializedObject = NSData
+    
+    public var serializeResponse: (NSURLRequest?, NSHTTPURLResponse?, NSData?) -> Result<SerializedObject> {
+        
+        return { _ , response , data in
+            
+            guard let statusCode = response?.statusCode
+                else {
+                    
+                    // is this correct? Do missing response implies no internet connection?
+                    return .Failure(nil, APICommunicatorError.NoInternetConnection)
+            }
+            
+            switch statusCode {
                 
-                    let error : APICommunicatorError =
-                    {
-                        let nsError = errorType as NSError
-                        if(nsError.code == ErrorCode.Offline.rawValue)
-                        {
-                            return APICommunicatorError.NoInternetConnection
-                        }
-                        return APICommunicatorError.GeneralError(statusCode: nsError.code, message: nsError.description)
-                        }()
-                    innerHandler?(responseObject: nil, error: error)
-                    break
-                }
+            case 200...399:
+                return Result.Success(data ?? NSData())
+                
+            case 400...599:
+                return Result.Failure(data, APICommunicatorError.APIError(statusCode: statusCode, responseData: data))
+                
+            default:
+                return Result.Failure(data, APICommunicatorError.GeneralError(statusCode: 0, message: "Something went wrong."))
+            }
         }
     }
 }
