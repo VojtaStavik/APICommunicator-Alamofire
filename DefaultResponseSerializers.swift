@@ -15,11 +15,6 @@ extension JSON : APIResponseSerializer {
         
         guard let data = responseData else { return nil }
         
-        if let dictionary = NSKeyedUnarchiver.unarchiveObjectWithData(data) as? NSDictionary {
-            
-            return JSON(dictionary)
-        }
-        
         var error : NSError?
         let json = JSON(data: data, options: .AllowFragments, error: &error)
         if let error = error {
