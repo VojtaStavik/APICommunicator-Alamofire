@@ -38,15 +38,15 @@ public protocol APIResponseSerializer {
 public typealias APIRequestOperationIdentifier = String
 
 public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
-
+    
     public typealias ResponseDataType = T
     
     public typealias CompletionClosure = (responseObject: ResponseDataType?, error: APICommunicatorError?) -> Void
     public typealias DataHandlerClosure = (responseObject: ResponseDataType?, error: APICommunicatorError?, context: NSManagedObjectContext?) -> Void
     
     /**
-    If nil, dataHandler is automatically called when request is finished. If you implement this, don't forget to call dataHandler manually. Defaul is nil.
-    */
+     If nil, dataHandler is automatically called when request is finished. If you implement this, don't forget to call dataHandler manually. Defaul is nil.
+     */
     public var requestCompletionClosure : CompletionClosure? = nil
     public var dataHandler : DataHandlerClosure? = nil
     
@@ -62,11 +62,11 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
     
     public var activityIndicator: APIActivityIndicator? = nil
         {
-            didSet
-            {
-                copyOperationReference?.activityIndicator = activityIndicator
-            }
+        didSet
+        {
+            copyOperationReference?.activityIndicator = activityIndicator
         }
+    }
     
     
     public var context : NSManagedObjectContext? = nil
@@ -89,15 +89,15 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
     public var requestIdentifier: String? = nil
     
     lazy public var identifier : APIRequestOperationIdentifier =
-        {
-            return self.randomStringWithLength(15)
-        }()
+    {
+        return self.randomStringWithLength(15)
+    }()
     
     
-    let communicator : APICommunicator
-    let method : HTTPMethod
-    let path : String
-    let customCallClosure : APICommunicatorCustomCallClosure?
+    public let communicator : APICommunicator
+    public let method : HTTPMethod
+    public let path : String
+    public let customCallClosure : APICommunicatorCustomCallClosure?
     
     
     public init(communicator: APICommunicator, path: String, method: HTTPMethod, paramEncoding : ParamEncoding? = ParamEncoding.JSON) {
@@ -128,7 +128,7 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
             finish()
             return
         }
-
+        
         executing = true
         currentProgress = 0
         
@@ -157,16 +157,16 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
         }
         
         
-
+        
         // progress closure
         let updateProgress : ProgressUpdateClosure = { [weak self] progress in
-        
+            
             self?.currentProgress = progress
         }
         
         
         if let customCallClosure = customCallClosure {
-        
+            
             // Execute custom call closure if any
             self.currentApiCommunicatorOperation = communicator.performCustomCall(customCallClosure, progress: updateProgress, completion: innerCompletion)
         }
@@ -193,8 +193,8 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
                 break
             }
         }
-
-
+        
+        
     }
     
     
@@ -241,8 +241,8 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
                 
                 aSelf.finish()
                 aSelf.communicatorError = error
-
-            }
+                
+        }
     }
     
     
@@ -268,12 +268,12 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
         
         super.cancel()
         currentApiCommunicatorOperation?.cancel()
-
+        
         currentProgress = 1
         
         releaseReferences()
     }
-
+    
     
     // MARK: - NSOperation
     
@@ -291,7 +291,7 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
             sharedUserInfo = previousRequestOperation.sharedUserInfo
         }
     }
-
+    
     
     override public var executing : Bool {
         get { return _executing }
@@ -367,16 +367,16 @@ public class UserInfoDictionary  {
     
     public subscript(key: APIRequestOperationIdentifier) -> APIResponseSerializer?
         {
-            get
-            {
-                return data[key]
-            }
-        
-            set (newValue)
-            {
-                data[key] = newValue
-            }
+        get
+        {
+            return data[key]
         }
+        
+        set (newValue)
+        {
+            data[key] = newValue
+        }
+    }
     
     var data = [APIRequestOperationIdentifier : APIResponseSerializer]()
 }
@@ -420,24 +420,34 @@ extension String
 }
 
 
-
-
-
 // A protocol defining APIRequestOperation public interface
-// it's used for accessing non-generic values 
-
-public protocol APIRequestOperationProtocol {
+// it's used for accessing non-generic values
+public protocol APIRequestOperationProtocol : class {
+    var activityIndicator: APIActivityIndicator? { get set }
+    var context: NSManagedObjectContext? { get set }
+    var communicatorError: APICommunicator_Alamofire.APICommunicatorError? { get set }
+    var copyNumber: Int { get }
+    var updateProgressClosure: ((currentProgress: Float) -> ())? { get set }
+    var requestIdentifier: String? { get set }
+    var didFinishiWithErrorClosure: ((APICommunicator_Alamofire.APICommunicatorError?) -> Void)? { get set }
     
-    var activityIndicator: APIActivityIndicator?     { set get }
-    var context : NSManagedObjectContext?            { set get }
-    var communicatorError: APICommunicatorError?     { set get }
-    var copyNumber: Int                                  { get }
-    var updateProgressClosure : ((currentProgress: Float) -> ())? { set get }
-    var requestIdentifier: String?                   { set get }
+    var parameters: [String : AnyObject]? { get set }
+    var headers: [String : String]? { get set }
+    var futureParameters: [String : FutureEvaluatable]? { get set }
+    var futureHeaders: [String : ([APICommunicator_Alamofire.APIRequestOperationIdentifier : APIResponseSerializer]) -> String]? { get set }
+    
+    var paramEncoding: APICommunicator_Alamofire.ParamEncoding { get set }
+    var currentProgress: Float { get set }
+    
+    var sharedUserInfo: APICommunicator_Alamofire.UserInfoDictionary { get set }
+    var identifier: APICommunicator_Alamofire.APIRequestOperationIdentifier { get set }
+    
+    var communicator: APICommunicator { get }
+    var method: APICommunicator_Alamofire.HTTPMethod { get }
+    var path: String { get }
+    var customCallClosure: APICommunicator_Alamofire.APICommunicatorCustomCallClosure? { get }
     
     func cancel()
 }
 
-
 extension APIRequestOperation : APIRequestOperationProtocol { }
-
