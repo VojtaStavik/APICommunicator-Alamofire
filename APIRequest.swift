@@ -51,9 +51,7 @@ public extension Array where Element : NSOperation {
             
             let completedPart = Float(index) * step
             
-            var mutableOperation = operation as? APIRequestOperationProtocol
-        
-            mutableOperation?.updateProgressClosure = { progress in
+            (operation as? APIRequestOperationProtocol)?.updateProgressClosure = { progress in
                 
                 indicator?.apiCallProgressUpdated(completedPart + progress * step)
             }
@@ -97,8 +95,7 @@ public extension Array where Element : NSOperation {
             // I would either save it as an associate object (bleh) or
             // solve it this way. I'm not happy about this but I can't
             // find any other solution now
-            var mutableOperation = operation as? APIRequestOperationProtocol
-            mutableOperation?.activityIndicator = indicator
+            (operation as? APIRequestOperationProtocol)?.activityIndicator = indicator
         }
         
         self = [activityStartedOperation] + self + [activityFinishedOperation]
@@ -113,8 +110,7 @@ public extension Array where Element : NSOperation {
         {
             for operation in self
             {
-                var mutableOperation = operation as? APIRequestOperationProtocol
-                mutableOperation?.context = context
+                (operation as? APIRequestOperationProtocol)?.context = context
             }
         }
 
@@ -125,14 +121,12 @@ public extension Array where Element : NSOperation {
     }
 
 
-    public var requestIdentifier : String? {
-        
-        set {
-            
+    public var requestIdentifier : String?
+    {
+        set
+        {
             forEach {
-                
-                var mutableOperation = $0 as? APIRequestOperationProtocol
-                mutableOperation?.requestIdentifier = newValue
+                ($0 as? APIRequestOperationProtocol)?.requestIdentifier = newValue
             }
         }
         
