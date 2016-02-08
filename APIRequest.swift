@@ -51,7 +51,7 @@ public extension Array where Element : NSOperation {
             
             let completedPart = Float(index) * step
             
-            (operation as? APIRequestOperationProtocol)?.updateProgressClosure = { progress in
+            (operation as? APIRequestOperationProtocol)?.updateProgressClosure = { [weak indicator] progress in
                 
                 indicator?.apiCallProgressUpdated(completedPart + progress * step)
             }
@@ -60,7 +60,7 @@ public extension Array where Element : NSOperation {
         
         
         let activityStartedOperation = NSBlockOperation()
-                                            {
+                                            { [weak indicator] in
                                                 dispatch_async(dispatch_get_main_queue())
                                                     {
                                                         indicator?.apiCallStarted()
@@ -70,7 +70,7 @@ public extension Array where Element : NSOperation {
         
         
         let activityFinishedOperation  = NSBlockOperation()
-                                            {
+                                            { [weak indicator] in
                                                 var errors = [APICommunicatorError]()
                                                 
                                                 for operation in self

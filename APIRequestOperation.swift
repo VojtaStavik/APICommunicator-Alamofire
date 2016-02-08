@@ -60,7 +60,7 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
     
     public var paramEncoding : ParamEncoding
     
-    public var activityIndicator: APIActivityIndicator? = nil
+    public weak var activityIndicator: APIActivityIndicator? = nil
         {
         didSet
         {
@@ -423,7 +423,7 @@ extension String
 // A protocol defining APIRequestOperation public interface
 // it's used for accessing non-generic values
 public protocol APIRequestOperationProtocol : class {
-    var activityIndicator: APIActivityIndicator? { get set }
+    weak var activityIndicator: APIActivityIndicator? { get set }
     var context: NSManagedObjectContext? { get set }
     var communicatorError: APICommunicator_Alamofire.APICommunicatorError? { get set }
     var copyNumber: Int { get }
