@@ -199,6 +199,10 @@ public class APIRequestOperation<T: APIResponseSerializer> : NSOperation {
     
     
     lazy var innerCompletion : APICommunicatorCompletionClosure = { [weak self] responseObject , error -> Void in
+        if self?.cancelled ?? true {
+            self?.finish()
+            return
+        }
         
         dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0))
             {
