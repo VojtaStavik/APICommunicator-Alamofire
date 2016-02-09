@@ -225,7 +225,12 @@ extension AlamofireAPIFactory {
                 var communicatorError = errorType as? APICommunicatorError
                 if communicatorError == nil {
                     let error = errorType as NSError
-                    communicatorError = APICommunicatorError.GeneralError(statusCode: error.code, message: error.localizedDescription)
+                    let networkErrors = [NSURLErrorNetworkConnectionLost, NSURLErrorNotConnectedToInternet]
+                    if error.domain == NSURLErrorDomain && networkErrors.contains(error.code) {
+                        communicatorError = APICommunicatorError.NoInternetConnection
+                    } else {
+                        communicatorError = APICommunicatorError.GeneralError(statusCode: error.code, message: error.localizedDescription)
+                    }
                 }
 
                 innerHandler?(responseObject: nil, error: communicatorError)
