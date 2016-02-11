@@ -221,19 +221,7 @@ extension AlamofireAPIFactory {
                 break
 
             case .Failure(_, let errorType):
-                
-                var communicatorError = errorType as? APICommunicatorError
-                if communicatorError == nil {
-                    let error = errorType as NSError
-                    let networkErrors = [NSURLErrorNetworkConnectionLost, NSURLErrorNotConnectedToInternet]
-                    if error.domain == NSURLErrorDomain && networkErrors.contains(error.code) {
-                        communicatorError = APICommunicatorError.NoInternetConnection
-                    } else {
-                        communicatorError = APICommunicatorError.GeneralError(statusCode: error.code, message: error.localizedDescription)
-                    }
-                }
-
-                innerHandler?(responseObject: nil, error: communicatorError)
+                innerHandler?(responseObject: nil, error: errorType as? APICommunicatorError)
                 break
             }
         }
@@ -249,7 +237,12 @@ public struct APICommunicatorDefaultResponseSerializer : ResponseSerializer {
         
         return { _ , response , data in
             
-            let statusCode = response?.statusCode ?? 0
+            guard let statusCode = response?.statusCode
+                else {
+                    
+                    // is this correct? Do missing response implies no internet connection?
+                    return .Failure(nil, APICommunicatorError.NoInternetConnection)
+            }
             
             switch statusCode {
                 
@@ -260,7 +253,7 @@ public struct APICommunicatorDefaultResponseSerializer : ResponseSerializer {
                 return Result.Failure(data, APICommunicatorError.APIError(statusCode: statusCode, responseData: data))
                 
             default:
-                return Result.Failure(data, APICommunicatorError.GeneralError(statusCode: statusCode, message: "Something went wrong."))
+                return Result.Failure(data, APICommunicatorError.GeneralError(statusCode: 0, message: "Something went wrong."))
             }
         }
     }
