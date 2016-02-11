@@ -1,6 +1,5 @@
 //
 //  APICommunicator+Alamofire.swift
-//  Flip
 //
 //  Created by Jozef Matus on 17/09/15.
 //  Copyright © 2015 strv. All rights reserved.
@@ -14,8 +13,8 @@ enum Router: URLRequestConvertible
 {
     static var OAuthToken: String?
     /**
-    This is redudant just in our case, it might happen that download
-    **/
+     This is redudant just in our case, it might happen that download
+     **/
     case SendRequest(method: Alamofire.Method, path: NSURL, parameters: [String : AnyObject]?, paramEncoding: ParameterEncoding, headers: [String: String]?)
     case Download(method: Alamofire.Method, path: NSURL, headers: [String: String]?)
     case Upload(method: Alamofire.Method, path: NSURL, headers: [String: String]?)
@@ -113,148 +112,81 @@ enum Router: URLRequestConvertible
     
 }
 
-public class AlamofireAPIFactory
-{
-    public required init(baseURL: NSURL!)
-    {
+public class AlamofireAPIFactory {
+    public required init(baseURL: NSURL!) {
         self.baseURL = baseURL
     }
     
-    enum ErrorCode: Int
-    {
-        case Offline = -1009
-        case Canceled = -999
-    }
-    
-    
     let baseURL: NSURL
     
-    
-    /**
-     Provide your custom response serializer, if you want to handle your server responses differently
-     */
-    public var responseSerializer = APICommunicatorDefaultResponseSerializer()
-    
-    
     // MARK: - Alamofire
-    
-    func sendAlamofireRequest(method: Alamofire.Method, path: String, parameters: [String : AnyObject]?, encoding: ParameterEncoding, options: NSJSONReadingOptions = .AllowFragments, headers: [String : String]?,completionHandler: (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void)
+    func sendAlamofireRequest(method: Alamofire.Method, path: String, parameters: [String : AnyObject]?, encoding: ParameterEncoding, options: NSJSONReadingOptions = .AllowFragments, headers: [String : String]?,completionHandler: APICommunicatorCompletionClosure?)
     {
-        guard let url = NSURL(string: baseURL.absoluteString + path)
-            else {
-                
-                completionHandler(nil, nil, Result.Failure(nil, APICommunicatorError.GeneralError(statusCode: 0, message: "Invalid URL")))
-                return
+        guard let url = NSURL(string: baseURL.absoluteString + path) else {
+            completionHandler?(responseObject: nil, error: APICommunicatorError.GeneralError(statusCode: 0, message: "Invalid URL"))
+            return
         }
         
-        Alamofire.request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers))
-                 .response(responseSerializer: responseSerializer, completionHandler: completionHandler)
+        Alamofire
+            .request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers))
+            .responseData { response -> Void in
+                guard let statusCode = response.response?.statusCode else {
+                    completionHandler?(responseObject: nil, error: APICommunicatorError.NoInternetConnection)
+                    return
+                }
+                
+                switch (statusCode, response.result) {
+                case (200...399, let result) where result.value != nil:
+                    completionHandler?(responseObject: result.value!, error: nil)
+                    
+                case (400...599, let result):
+                    completionHandler?(responseObject: nil, error: (APICommunicatorError.APIError(statusCode: statusCode, responseData: result.value)))
+                    
+                default:
+                    completionHandler?(responseObject: nil, error: (APICommunicatorError.GeneralError(statusCode: statusCode, message: "Unknown error")))
+                }
+        }
     }
 }
 
 
 extension AlamofireAPIFactory : APICommunicator {
-    
-    public func get(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    {
-        sendAlamofireRequest(.GET, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
+    public func get(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation? {
+        sendAlamofireRequest(.GET, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: completion)
         return nil
     }
     
-    public func post(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    {
-        
-        sendAlamofireRequest(.POST, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
+    public func post(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation? {
+        sendAlamofireRequest(.POST, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: completion)
         return nil
     }
     
-    public func put(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    {
-        
-        sendAlamofireRequest(.PUT, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
+    public func put(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation? {
+        sendAlamofireRequest(.PUT, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: completion)
         return nil
     }
     
-    public func patch(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    {
-        
-        sendAlamofireRequest(.PATCH, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
+    public func patch(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation? {
+        sendAlamofireRequest(.PATCH, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: completion)
         return nil
     }
     
-    public func delete(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    {
-        
-        sendAlamofireRequest(.DELETE, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: AlamofireAPIFactory.completionHandler(completion))
+    public func delete(path: String, parameters: [String: AnyObject]?, headers: [String: String]?, paramEncoding: ParamEncoding, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation? {
+        sendAlamofireRequest(.DELETE, path: path, parameters: parameters, encoding: getAlamofireParamEncoding(paramEncoding), headers: headers, completionHandler: completion)
         return nil
     }
     
-    public func performCustomCall(callClosure: APICommunicatorCustomCallClosure, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation?
-    {
+    public func performCustomCall(callClosure: APICommunicatorCustomCallClosure, progress: ProgressUpdateClosure?, completion: APICommunicatorCompletionClosure?) -> NSOperation? {
         callClosure(progress: progress, completion: completion)
         return nil
     }
     
-    public func getAlamofireParamEncoding(ourEnconding: ParamEncoding) -> Alamofire.ParameterEncoding
-    {
-        switch (ourEnconding)
-        {
+    public func getAlamofireParamEncoding(ourEnconding: ParamEncoding) -> Alamofire.ParameterEncoding {
+        switch ourEnconding {
         case ParamEncoding.URL:
             return Alamofire.ParameterEncoding.URL
         case ParamEncoding.JSON:
             return Alamofire.ParameterEncoding.JSON
-        }
-    }
-}
-
-
-extension AlamofireAPIFactory {
-
-    public static func completionHandler(innerHandler: APICommunicatorCompletionClosure?) -> (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void {
-        
-        return { (request, response, result) -> Void in
-
-            switch result {
-
-            case .Success(let value):
-                innerHandler?(responseObject: value, error: nil)
-                break
-
-            case .Failure(_, let errorType):
-                innerHandler?(responseObject: nil, error: errorType as? APICommunicatorError)
-                break
-            }
-        }
-    }
-}
-
-
-public struct APICommunicatorDefaultResponseSerializer : ResponseSerializer {
-    
-    public typealias SerializedObject = NSData
-    
-    public var serializeResponse: (NSURLRequest?, NSHTTPURLResponse?, NSData?) -> Result<SerializedObject> {
-        
-        return { _ , response , data in
-            
-            guard let statusCode = response?.statusCode
-                else {
-                    
-                    // is this correct? Do missing response implies no internet connection?
-                    return .Failure(nil, APICommunicatorError.NoInternetConnection)
-            }
-            
-            switch statusCode {
-                
-            case 200...399:
-                return Result.Success(data ?? NSData())
-                
-            case 400...599:
-                return Result.Failure(data, APICommunicatorError.APIError(statusCode: statusCode, responseData: data))
-                
-            default:
-                return Result.Failure(data, APICommunicatorError.GeneralError(statusCode: 0, message: "Something went wrong."))
-            }
         }
     }
 }
