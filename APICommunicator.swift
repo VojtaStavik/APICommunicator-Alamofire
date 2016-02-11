@@ -33,3 +33,18 @@ public enum APICommunicatorError : ErrorType {
     case GeneralError(statusCode: Int , message: String)
 }
 
+
+extension APICommunicatorError: Equatable { }
+
+public func == (left: APICommunicatorError, right: APICommunicatorError) -> Bool {
+    switch (left, right) {
+    case (.NoInternetConnection, .NoInternetConnection):
+        return true
+    case (.APIError(let leftCode, let leftData), .APIError(let rightCode, let rightData)):
+        return leftCode == rightCode && leftData == rightData
+    case (.GeneralError(let leftStatusCode, let leftMessage), .GeneralError(let rightStatusCode, let rightMessage)):
+        return leftStatusCode == rightStatusCode && leftMessage == rightMessage
+    default:
+        return false
+    }
+}
