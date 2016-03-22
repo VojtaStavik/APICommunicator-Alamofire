@@ -14,8 +14,8 @@ enum Router: URLRequestConvertible
 {
     static var OAuthToken: String?
     /**
-    This is redudant just in our case, it might happen that download
-    **/
+     This is redudant just in our case, it might happen that download
+     **/
     case SendRequest(method: Alamofire.Method, path: NSURL, parameters: [String : AnyObject]?, paramEncoding: ParameterEncoding, headers: [String: String]?)
     case Download(method: Alamofire.Method, path: NSURL, headers: [String: String]?)
     case Upload(method: Alamofire.Method, path: NSURL, headers: [String: String]?)
@@ -133,7 +133,7 @@ public class AlamofireAPIFactory
     /**
      Provide your custom response serializer, if you want to handle your server responses differently
      */
-    public var responseSerializer = APICommunicatorDefaultResponseSerializer()
+    public var responseSerializer: GenericResponseSerializer<NSData> = APICommunicatorDefaultResponseSerializer
     
     
     // MARK: - Alamofire
@@ -148,7 +148,7 @@ public class AlamofireAPIFactory
         }
         
         Alamofire.request(Router.SendRequest(method: method,path: url, parameters: parameters, paramEncoding: encoding, headers: headers))
-                 .response(responseSerializer: responseSerializer, completionHandler: completionHandler)
+            .response(responseSerializer: responseSerializer, completionHandler: completionHandler)
     }
 }
 
@@ -209,17 +209,17 @@ extension AlamofireAPIFactory : APICommunicator {
 
 
 extension AlamofireAPIFactory {
-
+    
     public static func completionHandler(innerHandler: APICommunicatorCompletionClosure?) -> (NSURLRequest?, NSHTTPURLResponse?, Result<NSData>) -> Void {
         
         return { (request, response, result) -> Void in
-
+            
             switch result {
-
+                
             case .Success(let value):
                 innerHandler?(responseObject: value, error: nil)
                 break
-
+                
             case .Failure(_, let errorType):
                 
                 var communicatorError = errorType as? APICommunicatorError
@@ -232,7 +232,7 @@ extension AlamofireAPIFactory {
                         communicatorError = APICommunicatorError.GeneralError(statusCode: error.code, message: error.localizedDescription)
                     }
                 }
-
+                
                 innerHandler?(responseObject: nil, error: communicatorError)
                 break
             }
@@ -241,27 +241,19 @@ extension AlamofireAPIFactory {
 }
 
 
-public struct APICommunicatorDefaultResponseSerializer : ResponseSerializer {
+public let APICommunicatorDefaultResponseSerializer : GenericResponseSerializer<NSData> = GenericResponseSerializer { _, response, data in
+    let statusCode = response?.statusCode ?? 0
     
-    public typealias SerializedObject = NSData
-    
-    public var serializeResponse: (NSURLRequest?, NSHTTPURLResponse?, NSData?) -> Result<SerializedObject> {
+    switch statusCode {
         
-        return { _ , response , data in
-            
-            let statusCode = response?.statusCode ?? 0
-            
-            switch statusCode {
-                
-            case 200...399:
-                return Result.Success(data ?? NSData())
-                
-            case 400...599:
-                return Result.Failure(data, APICommunicatorError.APIError(statusCode: statusCode, responseData: data))
-                
-            default:
-                return Result.Failure(data, APICommunicatorError.GeneralError(statusCode: statusCode, message: "Something went wrong."))
-            }
-        }
+    case 200...399:
+        return Result.Success(data ?? NSData())
+        
+    case 400...599:
+        return Result.Failure(data, APICommunicatorError.APIError(statusCode: statusCode, responseData: data))
+        
+    default:
+        return Result.Failure(data, APICommunicatorError.GeneralError(statusCode: statusCode, message: "Something went wrong."))
     }
+    
 }
